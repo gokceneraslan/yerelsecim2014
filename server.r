@@ -54,7 +54,7 @@ plot.scatter <- function(input, all=F) {
 
   pl <- rPlot(CHP~AKP,  data = newdata, type = 'point', color='FazlaKatılım', size=size, tooltip = "#! function(e){return 'AKP: ' + e.AKP + '  CHP: ' + e.CHP + ' Alan:' + e.alan + ' Sandik:' + e.sandik + ' Katilim:%' + e.KatılımYüzde} !#")
   
-  pl$set(dom='mainChart', height=600, width=900)
+  pl$set(dom='mainChart', height=500, width=800)
   pl
 }
 
