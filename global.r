@@ -1,1 +1,1 @@
-data<- read.csv('ankara.csv')
+data<- read.csv('sonuclar.csv')
