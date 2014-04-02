@@ -19,46 +19,42 @@ plot.sandik.bar <- function(input) {
   
   newdata <- melt(newdata, measure.vars=parties, variable.name='Parti', value.name='Oy')
   
-  pl <- nPlot(Oy~Parti, color='Parti', data = newdata, type = 'discreteBarChart', id='mainChart')
+  pl <- rPlot(Oy~Parti,  color='Parti', data = newdata, type = 'bar', 
+              tooltip = "#! function(e){return 'Oy: ' + e.Oy + '  Parti: ' + e.Parti + ' Alan: ' + e.alan} !#")
   pl$set(dom='mainChart')
-  pl$chart(tooltipContent = "#! function(key, x, y, e){ 
-                                              return '<b>Parti:</b> ' + x + '<br/>  <b>Oy:</b> ' + y + '<br/> <b>Alan:</b>' + e.point.alan
-                                             } !#")
   
-  pl$yAxis(axisLabel = 'Oy sayisi')
-  pl$xAxis(axisLabel = 'Partiler')
-  pl$chart(margin = list(left = 100), showValues=T)
   pl
 }
 
-plot.scatter <- function(input) {
-  newdata <- subset(data, il==input$il & ilce==input$ilce)
-  varnames <- names(newdata)
+plot.scatter <- function(input, all=F) {
   
+  if (all)
+    newdata <- subset(data, il==input$il)
+  else 
+    newdata <- subset(data, il==input$il & ilce==input$ilce)
+  
+  varnames <- names(newdata)
+
   #fix party names
   parties <- varnames[16:32]
   parties <- unlist(strsplit(parties, '_'))
   parties <- toupper(parties[parties != 'oy'])
   names(newdata)[16:32] <- parties
-  newdata$katilim <- round((newdata$oy_kullanan_kayitli_secmen/newdata$kayitli_secmen) * 100, 2)
-  newdata$overKatilim <- ifelse(newdata$katilim > 100, '> %100', 'Katılım <= %100')
+  newdata$KatılımYüzde <- round((newdata$oy_kullanan_kayitli_secmen/newdata$kayitli_secmen) * 100, 2)
+  newdata$FazlaKatılım <- factor(ifelse(newdata$KatılımYüzde > 99, '> %99 Katılım', '< %99 Katılım'))
   
   #filter out some attributes
-  newdata <- newdata[, c('sandik', 'alan', 'CHP', 'AKP', 'katilim', 'overKatilim')]
-  
-  pl <- nPlot(CHP~AKP, group='overKatilim', data = newdata, type = 'scatterChart', id='mainChart')
-  pl$set(dom='mainChart')
-  pl$chart(tooltipContent = "#! function(key, x, y, e){ 
-                                               return '<b>AKP:</b> ' + x + '<br/>  <b>CHP:</b> ' + y + '<br/> <b>Alan:</b>' + e.point.alan + ' <br/><b>Sandik:</b>' + e.point.sandik + ' <br/><b>Katilim:</b>%' + e.point.katilim
-                                              } !#")
-  
+  newdata <- newdata[, c('sandik', 'alan', 'CHP', 'AKP', 'KatılımYüzde', 'FazlaKatılım')]
+    
   if (input$sizeByKatilim) {
-    pl$chart(size = '#! function(d){return (d.katilim/100)} !#')
+    size='KatılımYüzde'
+  } else {
+    size=list(const=3)
   }
 
-  pl$yAxis(axisLabel = 'CHP')
-  pl$xAxis(axisLabel = 'AKP')
-  pl$chart(margin = list(left = 100), color=c('blue', 'green', 'yellow'))
+  pl <- rPlot(CHP~AKP,  data = newdata, type = 'point', color='FazlaKatılım', size=size, tooltip = "#! function(e){return 'AKP: ' + e.AKP + '  CHP: ' + e.CHP + ' Alan:' + e.alan + ' Sandik:' + e.sandik + ' Katilim:%' + e.KatılımYüzde} !#")
+  
+  pl$set(dom='mainChart', height=600, width=900)
   pl
 }
 
@@ -67,8 +63,11 @@ shinyServer(function(input, output, session) {
 
   output$mainChart <- renderChart({
     if(is.null(input$sandik)) { return(rCharts$new()) }
-
-    if (input$sandik != 'TUMU') {
+    
+     if (input$ilce == 'TUMU') {
+       plot.scatter(input, all=T)
+     }
+     else if (input$sandik != 'TUMU') {
       plot.sandik.bar(input)
     }
     else {
@@ -78,13 +77,21 @@ shinyServer(function(input, output, session) {
 })
   
   output$sidebar <- renderUI({
-    div(selectInput("ilce", label = h3("İlçe"), 
-                choices = as.list(levels(subset(data, il == input$il, ilce, drop=T))), selected=input$ilce),
+    sandiklar <- sort(subset(data, (il == input$il) & (ilce == input$ilce), sandik, drop=T))
+    sandik.options <- c('--TÜMÜ--'='TUMU')
     
-        selectInput("sandik", label = h3("Sandık"), 
-                choices = as.list(c('--TÜMÜ--'='TUMU', 
-                                    sort(subset(data, (il == input$il) & (ilce == input$ilce), sandik, drop=T)))
-                                  )))
+    if (is.null(input$ilce) || input$ilce != 'TUMU') {
+      sandik.options <- c(sandik.options, sandiklar)
+      sandik.input <- selectInput("sandik", label = h3("Sandık"), 
+                                  choices = as.list(sandik.options))
+    } else {
+      sandik.input <- div()
+    }
+    
+    div(selectInput("ilce", label = h3("İlçe"), 
+                choices = as.list(c('--TÜMÜ--'='TUMU', levels(subset(data, il == input$il, ilce, drop=T)))), selected=input$ilce),    
+        sandik.input
+        )
   })
 
 })

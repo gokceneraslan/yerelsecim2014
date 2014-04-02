@@ -13,9 +13,9 @@ shinyUI(fluidPage(
                              choices = as.list(levels(data$il))),
                  uiOutput('sidebar'),
                  conditionalPanel(condition='input.sandik == "TUMU"',
-                                  checkboxInput("sizeByKatilim", label = "Katılıma göre boyutlandır", value = TRUE)
+                                  checkboxInput("sizeByKatilim", label = "Katılıma göre boyutlandır", value = FALSE)
                                   )
                  ),
-    mainPanel(showOutput('mainChart', 'nvd3'), value='Main'),
+    mainPanel(showOutput('mainChart', 'polycharts'), value='Main'),
     position = "left", fluid=T)
   ))
